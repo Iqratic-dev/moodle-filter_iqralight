@@ -1,0 +1,48 @@
+/* Iqralight "tap to load" placeholders. */
+.filter-iqra {
+    display: block;
+    max-width: 100%;
+    margin: 0.75rem 0;
+}
+
+.filter-iqra:not(.filter-iqra-loaded) > iframe,
+.filter-iqra:not(.filter-iqra-loaded) > object,
+.filter-iqra:not(.filter-iqra-loaded) > embed,
+.filter-iqra:not(.filter-iqra-loaded) > img {
+    display: none;
+}
+
+.filter-iqra-loaded > .filter-iqra-placeholder {
+    display: none;
+}
+
+.filter-iqra-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 1rem;
+    border: 1px dashed #cbd6d2;
+    border-radius: 1rem;
+    background: #f3f5f4;
+}
+
+.filter-iqra-label {
+    color: #4a5b56;
+    font-size: 0.875rem;
+}
+
+.filter-iqra-load {
+    min-height: 2.75rem;
+}
+
+.filter-iqra-direct {
+    display: inline-block;
+    padding-block: 0.625rem;
+    font-size: 0.875rem;
+}
+
+.filter-iqra-error {
+    color: #b3261e;
+    font-size: 0.875rem;
+}
