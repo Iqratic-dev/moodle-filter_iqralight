@@ -8,7 +8,8 @@
 .filter-iqra:not(.filter-iqra-loaded) > iframe,
 .filter-iqra:not(.filter-iqra-loaded) > object,
 .filter-iqra:not(.filter-iqra-loaded) > embed,
-.filter-iqra:not(.filter-iqra-loaded) > img {
+.filter-iqra:not(.filter-iqra-loaded) > img,
+.filter-iqra:not(.filter-iqra-loaded) > a {
     display: none;
 }
 

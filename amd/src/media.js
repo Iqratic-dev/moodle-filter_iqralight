@@ -75,7 +75,9 @@ const load = (wrapper, strings) => {
         media.replaceWith(clone);
         media = clone;
     }
-    media.addEventListener('error', () => {
+    // A linked image waits with its link: the error to watch is the image's.
+    const watched = media.tagName === 'A' ? (media.querySelector('img') || media) : media;
+    watched.addEventListener('error', () => {
         wrapper.classList.remove('filter-iqra-loaded');
         const message = document.createElement('span');
         message.className = 'filter-iqra-error';
@@ -112,8 +114,11 @@ const applyTextOnly = (strings) => {
         button.dataset.action = 'filter_iqralight/load';
         button.textContent = strings.showimage;
         placeholder.append(button);
-        image.replaceWith(wrapper);
-        wrapper.append(image, placeholder);
+        // A linked image is wrapped with its link, so that the button never sits inside a link.
+        const parent = image.parentElement;
+        const media = parent && parent.tagName === 'A' && parent.children.length === 1 ? parent : image;
+        media.replaceWith(wrapper);
+        wrapper.append(media, placeholder);
     });
 };
 

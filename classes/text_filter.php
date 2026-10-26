@@ -95,6 +95,7 @@ class text_filter extends \core_filters\text_filter {
         $text = preg_replace_callback('~<iframe\b[^>]*>.*?</iframe>~is', [$this, 'defer_iframe'], $text);
         $text = preg_replace_callback('~<object\b[^>]*>.*?</object>~is', [$this, 'defer_document'], $text);
         $text = preg_replace_callback('~<embed\b[^>]*>~i', [$this, 'defer_document'], $text);
+        $text = preg_replace_callback('~<a\b[^>]*>\s*<img\b[^>]*>\s*</a>~i', [$this, 'defer_linked_image'], $text);
         $text = preg_replace_callback('~<img\b[^>]*>~i', [$this, 'defer_image'], $text);
         return $text;
     }
@@ -217,6 +218,32 @@ class text_filter extends \core_filters\text_filter {
             $marked = preg_replace('~^<img\b~i', '<img loading="lazy"', $marked);
         }
         return $marked;
+    }
+
+    /**
+     * A heavy image inside a link waits with its link: the placeholder goes beside the
+     * link, never inside it (a button or a link inside a link is not valid HTML, and
+     * browsers would move them around).
+     *
+     * @param array $match
+     * @return string
+     */
+    protected function defer_linked_image(array $match): string {
+        $link = $match[0];
+        if (stripos($link, 'data-iqra-') !== false || !preg_match('~<img\b[^>]*>~i', $link, $image)) {
+            return $link;
+        }
+        $url = $this->attribute($image[0], 'src');
+        if ($url === null || stripos($url, 'data:') === 0) {
+            return $link;
+        }
+        $size = $this->file_size($url);
+        $threshold = 1024 * (int) (get_config('filter_iqralight', 'threshold') ?: self::DEFAULT_THRESHOLD);
+        if ($size === null || $size <= $threshold) {
+            // A light image: the image pass marks it, the link stays as it is.
+            return $link;
+        }
+        return $this->placeholder($link, 'image', $url, $size);
     }
 
     /**

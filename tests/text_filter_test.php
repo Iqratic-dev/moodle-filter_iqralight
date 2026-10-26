@@ -156,4 +156,22 @@ final class text_filter_test extends \advanced_testcase {
         $this->assertStringNotContainsString('href="javascript', $output);
         $this->assertStringNotContainsString('filter-iqra-direct', $output);
     }
+
+    /**
+     * A heavy image inside a link waits with its link: the placeholder never goes inside the link.
+     */
+    public function test_linked_image(): void {
+        $this->resetAfterTest();
+        set_config('threshold', 300, 'filter_iqralight');
+        [$filter, $context] = $this->page_filter();
+        get_file_storage()->create_file_from_string(['contextid' => $context->id, 'component' => 'mod_page',
+            'filearea' => 'content', 'itemid' => 0, 'filepath' => '/', 'filename' => 'board.jpg'], str_repeat('x', 500 * 1024));
+        $url = \moodle_url::make_pluginfile_url($context->id, 'mod_page', 'content', 0, '/', 'board.jpg')->out(false);
+
+        $output = $filter->filter('<p><a href="' . $url . '"><img src="' . $url . '" alt="Board"></a></p>');
+        $this->assertMatchesRegularExpression('~<span class="filter-iqra" data-filter-iqra="image"[^>]*><a href=~', $output);
+        $this->assertStringContainsString('</a><span class="filter-iqra-placeholder">', $output);
+        $this->assertStringContainsString('data-iqra-src="' . s($url) . '"', $output);
+        $this->assertSame($output, $filter->filter($output), 'Filtering twice changes nothing.');
+    }
 }
