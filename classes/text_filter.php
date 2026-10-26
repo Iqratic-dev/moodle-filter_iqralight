@@ -90,6 +90,11 @@ class text_filter extends \core_filters\text_filter {
         if ($this->is_excluded()) {
             return $text;
         }
+        if ($this->loads_everything()) {
+            // In "load everything" mode nothing waits, and the page does not depend on any script.
+            // Hosted videos and sounds still download only when played.
+            return preg_replace_callback('~<(video|audio)\b[^>]*>~i', [$this, 'defer_native_media'], $text);
+        }
         $text = preg_replace_callback(self::VIDEOJS_PLAYER, [$this, 'defer_player'], $text);
         $text = preg_replace_callback('~<(video|audio)\b[^>]*>~i', [$this, 'defer_native_media'], $text);
         $text = preg_replace_callback('~<iframe\b[^>]*>.*?</iframe>~is', [$this, 'defer_iframe'], $text);
@@ -98,6 +103,22 @@ class text_filter extends \core_filters\text_filter {
         $text = preg_replace_callback('~<a\b[^>]*>\s*<img\b[^>]*>\s*</a>~i', [$this, 'defer_linked_image'], $text);
         $text = preg_replace_callback('~<img\b[^>]*>~i', [$this, 'defer_image'], $text);
         return $text;
+    }
+
+    /**
+     * Whether the learner is in "load everything" mode of the Iqralight theme.
+     *
+     * The filter works with any theme: without Iqralight, media always wait for a tap.
+     *
+     * @return bool
+     */
+    protected function loads_everything(): bool {
+        global $PAGE;
+        // The page's theme is a magic property: empty() would always find it empty.
+        if (!class_exists('\theme_iqralight\local\mode') || $PAGE->theme->name !== 'iqralight') {
+            return false;
+        }
+        return \theme_iqralight\local\mode::effective() === 'full';
     }
 
     /**
