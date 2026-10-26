@@ -24,6 +24,8 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {notifyFilterContentUpdated} from 'core_filters/events';
+
 const WRAPPER = '[data-filter-iqra]';
 
 /**
@@ -53,6 +55,16 @@ const load = (wrapper, strings) => {
     }
     let media = wrapper.firstElementChild;
     if (!media || media.classList.contains('filter-iqra-placeholder')) {
+        return;
+    }
+    if (media.tagName === 'TEMPLATE') {
+        // A player built by Moodle: it is inserted now, and Moodle sets it up (and loads
+        // its script) through the usual event for new content.
+        const content = media.content.cloneNode(true);
+        const nodes = Array.from(content.children);
+        media.replaceWith(content);
+        wrapper.classList.add('filter-iqra-loaded');
+        notifyFilterContentUpdated(nodes);
         return;
     }
     restore(media);

@@ -34,5 +34,6 @@ function xmldb_filter_iqralight_install() {
     global $CFG;
     require_once($CFG->libdir . '/filterlib.php');
     filter_set_global_state('iqralight', TEXTFILTER_ON);
+    \filter_iqralight\local\order::move_last();
     return true;
 }

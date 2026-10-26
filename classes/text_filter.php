@@ -51,6 +51,10 @@ class text_filter extends \core_filters\text_filter {
     /** @var int Default threshold in KB above which an image waits for a tap. */
     public const DEFAULT_THRESHOLD = 300;
 
+    /** @var string A video or sound player built by Moodle's Video.js player, with its optional width wrapper. */
+    public const VIDEOJS_PLAYER = '~<div class="mediaplugin mediaplugin_videojs[^"]*">\s*(<div style="max-width:[^"]*">)?\s*' .
+        '<(video|audio)\b.*?</\2>\s*(?(1)</div>\s*)</div>~is';
+
     /** @var array File sizes already looked up in this request, by URL. */
     protected static $sizes = [];
 
@@ -86,6 +90,7 @@ class text_filter extends \core_filters\text_filter {
         if ($this->is_excluded()) {
             return $text;
         }
+        $text = preg_replace_callback(self::VIDEOJS_PLAYER, [$this, 'defer_player'], $text);
         $text = preg_replace_callback('~<(video|audio)\b[^>]*>~i', [$this, 'defer_native_media'], $text);
         $text = preg_replace_callback('~<iframe\b[^>]*>.*?</iframe>~is', [$this, 'defer_iframe'], $text);
         $text = preg_replace_callback('~<object\b[^>]*>.*?</object>~is', [$this, 'defer_document'], $text);
@@ -215,6 +220,28 @@ class text_filter extends \core_filters\text_filter {
     }
 
     /**
+     * Video and sound players built by Moodle (Video.js) wait for a tap, with their size.
+     *
+     * The whole player goes into a template: neither the media nor the player's script
+     * (about 240 KB) is downloaded before the learner asks for it.
+     *
+     * @param array $match
+     * @return string
+     */
+    protected function defer_player(array $match): string {
+        if (strpos($match[0], 'data-iqra-') !== false) {
+            return $match[0];
+        }
+        $kind = strtolower($match[2]) === 'audio' ? 'audio' : 'video';
+        $url = preg_match('~<source\b[^>]*>~i', $match[0], $source) ? $this->attribute($source[0], 'src') : null;
+        $url = $url ?? $this->attribute(preg_replace('~^.*?(<(?:video|audio)\b)~is', '$1', $match[0]), 'src');
+        $size = $url === null ? null : $this->file_size($url);
+        $bytes = $size === null ? '' : ' data-iqra-bytes="' . $size . '"';
+        return '<div class="filter-iqra" data-filter-iqra="' . $kind . '"' . $bytes . '>' .
+            '<template>' . $match[0] . '</template>' . $this->placeholder_markup($kind, $url, $size) . '</div>';
+    }
+
+    /**
      * Wraps a deferred element with its placeholder.
      *
      * @param string $element Original HTML of the element.
@@ -228,15 +255,33 @@ class text_filter extends \core_filters\text_filter {
         if (!$count) {
             return $element;
         }
-        $sizetext = $size === null ? get_string('unknownsize', 'filter_iqralight') : display_size($size);
         $bytes = $size === null ? '' : ' data-iqra-bytes="' . $size . '"';
         return '<span class="filter-iqra" data-filter-iqra="' . $kind . '"' . $bytes . '>' . $deferred .
-            '<span class="filter-iqra-placeholder">' .
+            $this->placeholder_markup($kind, $url, $size) . '</span>';
+    }
+
+    /**
+     * The placeholder itself: what is waiting, the load button and the direct link.
+     *
+     * The direct link is only offered for web addresses (http, https or relative): never
+     * for another scheme, such as javascript:.
+     *
+     * @param string $kind 'video', 'audio', 'document' or 'image'.
+     * @param string|null $url Address of the media.
+     * @param int|null $size Size in bytes, when known.
+     * @return string
+     */
+    protected function placeholder_markup(string $kind, ?string $url, ?int $size): string {
+        $sizetext = $size === null ? get_string('unknownsize', 'filter_iqralight') : display_size($size);
+        $scheme = $url === null ? null : parse_url($url, PHP_URL_SCHEME);
+        $safe = $url !== null && ($scheme === null || in_array(strtolower($scheme), ['http', 'https'], true));
+        return '<span class="filter-iqra-placeholder">' .
             '<span class="filter-iqra-label">' . get_string('notloaded_' . $kind, 'filter_iqralight') . '</span>' .
             '<button type="button" class="btn btn-primary filter-iqra-load" data-action="filter_iqralight/load">' .
             get_string('load_' . $kind, 'filter_iqralight', $sizetext) . '</button>' .
-            '<a class="filter-iqra-direct" href="' . s($url) . '">' . get_string('opendirect', 'filter_iqralight') . '</a>' .
-            '</span></span>';
+            ($safe ? '<a class="filter-iqra-direct" href="' . s($url) . '">' .
+                get_string('opendirect', 'filter_iqralight') . '</a>' : '') .
+            '</span>';
     }
 
     /**
@@ -288,12 +333,20 @@ class text_filter extends \core_filters\text_filter {
         $path = preg_replace('~[?#].*$~', '', $url);
         if (preg_match($prefix, $path, $m)) {
             $filename = rawurldecode(basename($m[4]));
-            $found = $DB->get_field_sql(
-                "SELECT MAX(filesize) FROM {files}
-                  WHERE contextid = ? AND component = ? AND filearea = ? AND filename = ?",
-                [(int) $m[1], $m[2], $m[3], $filename]
-            );
-            $size = $found ? (int) $found : null;
+            // Sizes are kept for an hour across pages: -1 means "not a file of this site".
+            $cache = \cache::make('filter_iqralight', 'filesizes');
+            $key = sha1($m[1] . '/' . $m[2] . '/' . $m[3] . '/' . $filename);
+            $cached = $cache->get($key);
+            if ($cached === false) {
+                $found = $DB->get_field_sql(
+                    "SELECT MAX(filesize) FROM {files}
+                      WHERE contextid = ? AND component = ? AND filearea = ? AND filename = ?",
+                    [(int) $m[1], $m[2], $m[3], $filename]
+                );
+                $cached = $found ? (int) $found : -1;
+                $cache->set($key, $cached);
+            }
+            $size = $cached >= 0 ? (int) $cached : null;
         }
         return self::$sizes[$url] = $size;
     }

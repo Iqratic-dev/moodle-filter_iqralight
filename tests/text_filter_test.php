@@ -120,4 +120,40 @@ final class text_filter_test extends \advanced_testcase {
         $filter = new text_filter(context_module::instance($forum->cmid), []);
         $this->assertSame(self::YOUTUBE, $filter->filter(self::YOUTUBE));
     }
+
+    /**
+     * Players built by Moodle's Video.js wait in a template, with their size and a direct link.
+     */
+    public function test_videojs_player(): void {
+        $this->resetAfterTest();
+        [$filter, $context] = $this->page_filter();
+        get_file_storage()->create_file_from_string(['contextid' => $context->id, 'component' => 'mod_page',
+            'filearea' => 'content', 'itemid' => 0, 'filepath' => '/', 'filename' => 'lesson.mp4'], str_repeat('x', 2048));
+        $url = \moodle_url::make_pluginfile_url($context->id, 'mod_page', 'content', 0, '/', 'lesson.mp4')->out(false);
+        $player = '<div class="mediaplugin mediaplugin_videojs d-block"><div style="max-width:400px;">' .
+            '<video id="v1" class="video-js" preload="auto" controls="true" data-setup-lazy="{}">' .
+            '<source src="' . $url . '" type="video/mp4"><a href="' . $url . '">lesson.mp4</a></video></div></div>';
+
+        $output = $filter->filter('<p>Watch:</p>' . $player . '<p>End</p>');
+        $this->assertStringContainsString('data-filter-iqra="video"', $output);
+        $this->assertStringContainsString('<template><div class="mediaplugin mediaplugin_videojs d-block">', $output);
+        $this->assertStringContainsString('data-setup-lazy="{}"', $output);
+        $this->assertStringContainsString('preload="none"', $output, 'Even once loaded, nothing downloads before play.');
+        $this->assertStringNotContainsString('preload="auto"', $output);
+        $this->assertStringContainsString(get_string('load_video', 'filter_iqralight', display_size(2048)), $output);
+        $this->assertStringContainsString('class="filter-iqra-direct" href="' . s($url) . '"', $output);
+        $this->assertStringContainsString('<p>End</p>', $output);
+        $this->assertSame($output, $filter->filter($output), 'Filtering twice changes nothing.');
+    }
+
+    /**
+     * The direct link never uses a scheme other than http or https.
+     */
+    public function test_direct_link_scheme(): void {
+        $this->resetAfterTest();
+        [$filter] = $this->page_filter();
+        $output = $filter->filter('<object data="javascript:alert(1)//x.pdf" type="application/pdf"></object>');
+        $this->assertStringNotContainsString('href="javascript', $output);
+        $this->assertStringNotContainsString('filter-iqra-direct', $output);
+    }
 }

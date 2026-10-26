@@ -25,13 +25,16 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['cachedef_filesizes'] = 'Size of the files shown in course content';
 $string['excludedmodules'] = 'Never filter these activities';
 $string['excludedmodules_desc'] = 'Quizzes, question banks, H5P and virtual classrooms are always excluded. Add here any other activity type to leave untouched. To exclude a whole course, turn the filter off in that course\'s filter settings.';
 $string['filtername'] = 'Iqralight: tap to load';
+$string['load_audio'] = 'Load the sound ({$a})';
 $string['load_document'] = 'Load the document ({$a})';
 $string['load_image'] = 'Show the image ({$a})';
 $string['load_video'] = 'Load the video ({$a})';
 $string['loadfailed'] = 'Loading failed. Try again.';
+$string['notloaded_audio'] = 'Sound not loaded, to save your data.';
 $string['notloaded_document'] = 'Document not loaded, to save your data.';
 $string['notloaded_image'] = 'Image not loaded, to save your data.';
 $string['notloaded_video'] = 'Video not loaded, to save your data.';

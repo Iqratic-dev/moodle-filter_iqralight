@@ -17,6 +17,19 @@ connections. Heavy media wait for the learner's tap, with their size shown.
 - With the Iqralight theme in *Load everything* mode, everything loads straight
   away. Without the theme, every deferred media waits for a tap.
 
+## Video and sound players
+
+Players built by Moodle's Video.js player also wait for a tap, with the size of the
+file: neither the video nor the player's script (about 240 KB) is downloaded before
+the learner asks for it. Once loaded, the video still starts only when played.
+
+## Filter order
+
+This filter must come **after every other filter**, in particular after *Multimedia
+plugins*, which builds the players. It moves itself to the last place when installed
+or upgraded. If you add or reorder filters later, keep it last in
+*Site administration > Plugins > Filters > Manage filters*.
+
 ## Prudence rules
 
 - Only a short allow-list of elements is touched; anything else, and any

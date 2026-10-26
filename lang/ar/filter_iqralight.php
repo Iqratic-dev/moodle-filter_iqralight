@@ -25,13 +25,16 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['cachedef_filesizes'] = 'حجم الملفات المعروضة في محتوى الدورات';
 $string['excludedmodules'] = 'عدم تصفية هذه الأنشطة أبدًا';
 $string['excludedmodules_desc'] = 'تُستثنى الاختبارات وبنوك الأسئلة وH5P والفصول الافتراضية دائمًا. أضف هنا أي نوع آخر من الأنشطة تريد تركه كما هو. لاستثناء دورة كاملة، عطّل المرشّح في إعدادات المرشّحات لتلك الدورة.';
 $string['filtername'] = 'Iqralight: التحميل عند النقر';
+$string['load_audio'] = 'تحميل الصوت ({$a})';
 $string['load_document'] = 'تحميل المستند (⁦{$a}⁩)';
 $string['load_image'] = 'عرض الصورة (⁦{$a}⁩)';
 $string['load_video'] = 'تحميل الفيديو (⁦{$a}⁩)';
 $string['loadfailed'] = 'تعذّر التحميل. أعد المحاولة.';
+$string['notloaded_audio'] = 'لم يُحمَّل الصوت لتوفير بياناتك.';
 $string['notloaded_document'] = 'لم يُحمَّل المستند لتوفير بياناتك.';
 $string['notloaded_image'] = 'لم تُحمَّل الصورة لتوفير بياناتك.';
 $string['notloaded_video'] = 'لم يُحمَّل الفيديو لتوفير بياناتك.';
